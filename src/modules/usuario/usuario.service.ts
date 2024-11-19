@@ -1,19 +1,26 @@
-import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { BadRequestException, HttpCode, HttpStatus, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { DatabaseService } from 'src/database/database.service';
 import { LoginUsuarioDto } from './dto/login-usuario.dto';
+import { RpcException } from '@nestjs/microservices';
 
 @Injectable()
 export class UsuarioService {
 
+    private readonly logger = new Logger('AuthService');
     constructor(
         private readonly _databaseService: DatabaseService,
-    ){}
+    ){
+        this.logger.log('Conectado a la base de datos');
+    }
     
 
     public async loginUsuario(loginUsuario: LoginUsuarioDto){
         try {
             if(!await this.existUsuario(loginUsuario.correo)){
-                throw new BadRequestException('Usuario no existe');
+                throw new RpcException({
+                    status: HttpStatus.BAD_REQUEST,
+                    message: 'contraseña o correo inválidos'
+                });
             };
 
             const auth = await this._databaseService.usuario.findFirst({
@@ -24,7 +31,10 @@ export class UsuarioService {
             });
 
             if(!auth){
-                throw new BadRequestException('Correo o Contraseña inválidas');
+                throw new RpcException({
+                    status: HttpStatus.UNAUTHORIZED,
+                    message: 'Contraseña o correo inválidos'
+                });
             }
 
             return true;
@@ -32,7 +42,10 @@ export class UsuarioService {
             if(error instanceof BadRequestException){
                 throw error;
             }else {
-                throw new InternalServerErrorException('error interno');
+                throw new RpcException({
+                    status: HttpStatus.INTERNAL_SERVER_ERROR,
+                    message: 'Error interno del servidor al logear usuario'
+                });
             }
         }
     }
@@ -45,7 +58,7 @@ export class UsuarioService {
         });
 
 
-        if(existeUsuario!){
+        if(!existeUsuario){
             return false;
         }
         return true;
