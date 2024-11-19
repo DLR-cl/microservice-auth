@@ -39,7 +39,7 @@ export class UsuarioService {
 
             return true;
         }catch(error){
-            if(error instanceof BadRequestException){
+            if(error instanceof RpcException){
                 throw error;
             }else {
                 throw new RpcException({
